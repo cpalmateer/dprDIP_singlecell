@@ -1,0 +1,108 @@
+---
+title: "DprDIP fru P1 cell analysis PCA and Cluster"
+output: html_notebook
+---
+
+Now for the dpr/DIP analysis. So we'll use these as our PCs.
+
+```{r}
+library(Seurat)
+library(dplyr)
+library(cowplot)
+library(data.table)
+```
+
+
+```{r}
+PCgenes<-as.character(c("dpr1", "dpr2", "dpr3", "dpr4", "dpr5", 
+                  "dpr6", "dpr7", "dpr8", "dpr9", "dpr10", "dpr11", 
+                  "dpr12", "dpr13", "dpr14", "dpr15", "dpr16", "dpr17", "dpr18", 
+                  "dpr19", "dpr20","dpr21", "DIP-alpha", "DIP-beta", "DIP-gamma", "DIP-delta", "DIP-epsilon", "DIP-zeta"
+                  , "DIP-eta", "DIP-iota", "DIP-theta", "cDIP", "CG45781", "CG31814"))
+```
+
+
+Read in fru P1, GFP-expressing cell seurat object
+
+```{r}
+GFPcells<-readRDS ("~/Documents/Colleen's R-Notebooks/GFPcells.rds")
+```
+
+
+Run PCA dimentional reduction on only dpr/DIPs instead of highly variable genes
+
+
+```{r}
+dprDIPGFP<- RunPCA(GFPcells, features = PCgenes, npcs = 32)
+```
+
+Evaluate PC heatmaps
+```{r fig.height=25, fig.width=25}
+DimHeatmap(dprDIPGFP, dims = 1:32, cells = 500, balanced = TRUE)
+```
+
+Visualize elbow plot
+
+```{r}
+ElbowPlot(dprDIPGFP, ndims=32)
+```
+
+
+Cluster
+```{r}
+dprDIPGFP <- FindNeighbors(dprDIPGFP, dims = 1:20)
+dprDIPGFP <- FindClusters(dprDIPGFP, resolution = c(0.5,0.6,0.7,1,1.3,1.5,1.7,2,2.5))
+```
+
+Run UMAP
+```{r}
+dprDIPGFP <- RunUMAP(dprDIPGFP, dims = 1:20)
+```
+
+Generate the UMAP plot
+
+Figure 10A
+```{r}
+Idents(dprDIPGFP) <- "RNA_snn_res.1.3"
+DimPlot(dprDIPGFP, reduction = "umap")
+```
+
+
+
+Feature plots with dpr/DIP expression overlayed
+
+Supplementary figure 5
+```{r fig.height=30, fig.width=15}
+FeaturePlot(dprDIPGFP, features = c("dpr1", "dpr2", "dpr3", "dpr4", "dpr5", 
+                  "dpr6", "dpr7", "dpr8", "dpr9", "dpr10", "dpr11", 
+                  "dpr12", "dpr13", "dpr14", "dpr15", "dpr16", "dpr17", "dpr18", 
+                  "dpr19", "dpr20","dpr21","DIP-alpha", "DIP-beta", "DIP-gamma", "DIP-delta", "DIP-epsilon", "DIP-zeta"
+                  , "DIP-eta", "DIP-iota", "DIP-theta", "cDIP", "CG45781", "CG31814"), cols=c("lightgrey", "purple"))
+```
+
+Dotplot analysis for dpr/DIPs for GFP expressing cells
+
+Figure 10 B
+```{r}
+DotPlot(object = dprDIPGFP, feature = c("CG45781", "CG31814", "DIP-iota", "DIP-theta", "DIP-eta", "DIP-zeta", "DIP-epsilon", "DIP-delta","DIP-gamma", "DIP-beta", "DIP-alpha", "dpr21", 
+"dpr20","dpr19", "dpr18", "dpr17", "dpr16", "dpr15", "dpr14","dpr13", "dpr12", "dpr11", "dpr10", "dpr9", "dpr8", "dpr7", "dpr6", "dpr5", "dpr4",
+"dpr3", "dpr2", "dpr1")) + RotatedAxis()
+```
+
+
+
+```{r}
+print(sessionInfo())
+```
+
+
+
+
+
+
+
+
+
+
+
+
