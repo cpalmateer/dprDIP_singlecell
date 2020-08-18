@@ -1,0 +1,162 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+New Seurat analysis on full 25K data set - adapted from tutorial provided at: https://satijalab.org/seurat/v3.0/pbmc3k_tutorial.html
+
+```{r}
+library(Seurat)
+library(dplyr)
+library(cowplot)
+library(data.table)
+```
+
+
+```{r}
+data_dir <- '/home/cpalmateer/Desktop/Cellranger/outs/filtered_gene_bc_matrices/dm6SCGFPNEW'
+list.files(data_dir)
+Full25K <- Read10X(data.dir = data_dir)
+Full25K <- CreateSeuratObject(counts = Full25K, min.cells = 3, min.features = 200, 
+                           project = "48hrAPF")
+```
+
+Prefiletering and QC on all the cells 
+
+```{r fig.height=5, fig.width=8}
+Full25K[["percent.mt"]] <- PercentageFeatureSet(Full25K, pattern = "mt")
+VlnPlot(Full25K, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"),pt.size=0, ncol=3)
+```
+```{r fig.height=5, fig.width=8}
+VlnPlot(Full25K, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol=3)
+```
+
+Using these QC metrics, I'll filter out cells
+
+    
+```{r fig.height=5, fig.width=15}
+plot1 <- FeatureScatter(Full25K, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(Full25K, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+
+CombinePlots(plots = list(plot1, plot2))
+```
+
+    We filter cells that have unique feature counts over 6000 or less than 200
+    We filter cells that have >5% mitochondrial counts
+
+
+```{r}
+Full25K <- subset(Full25K, subset = nFeature_RNA > 200 & nFeature_RNA < 6000 & percent.mt < 5)
+Full25K
+```
+24,902 total cells
+
+```{r fig.height=5, fig.width=15}
+plot1 <- FeatureScatter(Full25K, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1
+```
+Very good agreement 
+
+
+Now how many are GFP positive and therefore fru P1-expressing cells?
+```{r}
+GFPcells<- SubsetData(Full25K,subset.name="GFP", assay = NULL,cells= NULL, low.threshold = 0)
+GFPcells
+```
+5,621 GFP positive cells - fru P1-expressing cells
+
+-----------------------------
+Now to subset out the GFP positve cells
+```{r}
+GFPcells <- SubsetData(Full25K,subset.name="GFP", assay = NULL,cells= NULL, low.threshold = 0)
+GFPcells
+```
+
+
+Now I'll run normalization and scaling steps on the GFP expressing cells
+```{r}
+GFPcells <- NormalizeData(GFPcells, normalization.method = "LogNormalize", scale.factor = 10000)
+```
+
+
+Identification of highly variable features (feature selection)
+
+We next calculate a subset of features that exhibit high cell-to-cell variation in the dataset (i.e, they are highly expressed in some cells, and lowly expressed in others). 
+
+```{r}
+GFPcells <- FindVariableFeatures(GFPcells, selection.method = "vst", nfeatures = 2000)
+```
+
+```{r}
+# Identify the 10 most highly variable genes
+top10GFP <- head(VariableFeatures(GFPcells), 10)
+# plot variable features with and without labels
+plot1GFP <- VariableFeaturePlot(GFPcells)
+plot2GFP <- LabelPoints(plot = plot1GFP, points = top10GFP, repel = TRUE)
+CombinePlots(plots = list(plot1GFP, plot2GFP))
+```
+
+Scaling the data
+
+Next, we apply a linear transformation (‘scaling’) that is a standard pre-processing step prior to dimensional reduction techniques like PCA. The ScaleData function:
+
+    Shifts the expression of each gene, so that the mean expression across cells is 0
+    Scales the expression of each gene, so that the variance across cells is 1
+        This step gives equal weight in downstream analyses, so that highly-expressed genes do not dominate
+        
+```{r}
+all.genesGFP <- rownames(GFPcells)
+GFPcells <- ScaleData(GFPcells, features = all.genesGFP)
+```
+
+
+
+
+Pull expression table for dprs/DIPs 
+```{r}
+include_list <- c("dpr1", "dpr2", "dpr3", "dpr4", "dpr5", 
+                  "dpr6", "dpr7", "dpr8", "dpr9", "dpr10", "dpr11", 
+                  "dpr12", "dpr13", "dpr14", "dpr15", "dpr16", "dpr17", "dpr18", 
+                  "dpr19", "dpr20","dpr21", "DIP-alpha", "DIP-beta", "DIP-gamma", "DIP-delta", "DIP-epsilon", "DIP-zeta"
+                  , "DIP-eta", "DIP-iota", "DIP-theta", "cDIP", "CG45781", "CG31814")
+```
+
+Now I want to write out spreadsheets - supplemenrary table 6, sheet 2:
+
+```{r}
+#get the list of GFP cells only
+data_to_write_out2 <- as.data.frame(as.matrix(GFPcells[["RNA"]]@scale.data))
+GFPcellsdprDIP<-subset(data_to_write_out2, rownames(data_to_write_out2) %in% include_list)
+fwrite(x = GFPcellsdprDIP, row.names = TRUE, file = "GFPcellsdprDIP_manuscale.csv")
+```
+
+Save seurat object for downstream analyses
+```{r}
+saveRDS(GFPcells, file = "GFPcells.rds")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
