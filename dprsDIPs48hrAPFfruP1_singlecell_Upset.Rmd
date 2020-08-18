@@ -1,0 +1,72 @@
+---
+title: "dprs/DIPs 48hr APF single cell Upset"
+output: html_notebook
+---
+
+Scaled data analysis using data from Supplemtary table S6, sheet 2
+
+```{r}
+library(UpSetR)
+library(data.table)
+```
+
+Read in the table and transpose the single cell matrix
+```{r}
+GFPcells<- read.table(file="~/Desktop/GFPcellsdprDIP_manuscale.csv", header=TRUE, sep=",")
+GFPcellsT = setNames(data.frame(t(GFPcells[,-1])), GFPcells[,1])
+```
+
+Now I have to export the data.frame out and read it back in to get my headers back.
+```{r}
+fwrite(x = GFPcellsT, row.names = TRUE, file = "GFPcellsdprDIPManuscriptscaleT.csv")
+```
+
+Bring it back in so all cell names are put into their own column 
+```{r}
+GFPcellsT1<- read.table(file="~/Desktop/GFPcellsdprDIPManuscriptscaleT.csv", header=TRUE, sep=",")
+```
+
+Now, I need to binarize the expression matrix, anything with a value over 0 is converted to a "1"
+```{r}
+GFPcellsT1[GFPcellsT1 > 1] = 1
+GFPcellsT1[GFPcellsT1 < 1] = 0
+```
+
+
+Now ask how many cells do not have any dpr/DIPs with at least one dpr/DIP expressed based on these criteria
+```{r}
+mydatanew=GFPcellsT1[,-1] 
+nonzero_row <- mydatanew[rowSums(mydatanew) > 0, ]
+dim(nonzero_row)
+```
+
+This narrows out 403 cells. 
+
+Now lets overwrite and rename the object to GFPcells for similicity.
+```{r}
+GFPcells<-GFPcellsT1
+```
+
+Export the binary data
+
+I have to export the data.frame out and read it back in to get my headers back.
+```{r}
+fwrite(x = GFPcells, row.names = TRUE, file = "GFPcellsdprDIPManuscriptBinaryscale.csv")
+```
+
+Make the Upset plot to ask about dpr/DIP expression combinations 
+
+```{r fig.height=15, fig.width=25}
+upset(GFPcells, sets = c("dpr1", "dpr2", "dpr3", "dpr4", "dpr5", 
+                  "dpr6", "dpr7", "dpr8", "dpr9", "dpr10", "dpr11", 
+                  "dpr12", "dpr13", "dpr14", "dpr15", "dpr16", "dpr17", "dpr18", 
+                  "dpr19", "dpr20","dpr21", "DIP.alpha", "DIP.beta", "DIP.gamma", "DIP.delta", "DIP.epsilon", "DIP.zeta"
+                  , "DIP.eta", "DIP.iota", "DIP.theta", "cDIP", "CG31814", "CG45781"),order.by = "freq", set_size.show = TRUE, nintersects = 250)
+```
+
+923 cells have a shared expression combo.
+
+
+```{r}
+print(sessionInfo())
+```
