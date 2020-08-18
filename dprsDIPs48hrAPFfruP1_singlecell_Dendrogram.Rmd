@@ -1,0 +1,37 @@
+---
+title: "dprDIP_singlecell_Dendrogram"
+output: html_notebook
+---
+
+
+
+```{r}
+library(tidyverse)  # data manipulation
+library(factoextra) # clustering visualization
+```
+
+Read in scaled data from supplementary table 6 sheet 2
+```{r}
+GFPcells<- read.table(file="~/Desktop/GFPcellsdprDIP_manuscale.csv",header=TRUE,row.names=1, sep=",")
+```
+
+
+```{r}
+fruP1GFP <- get_dist(GFPcells, method = "pearson")
+```
+
+```{r}
+fruP1GFP <- hclust(fruP1GFP, method = "average" )
+```
+
+Flip the dendrogram for visual appeal
+```{r fig.height=9, fig.width=12}
+plot(as.dendrogram(fruP1GFP, cex=0.6, horiz = TRUE))
+plot(as.dendrogram(fruP1GFP, hang=0.1),horiz=TRUE,xlab = "Height",cex = 0.6)
+```
+
+
+```{r}
+print(sessionInfo())
+```
+
